@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  </head>
+  <style type="text/css">
+
+    /* On mouse hover, lighten state color */
+    path:hover {
+      fill-opacity: .7;
+    }
+
+    /* Style for Custom Tooltip */
+    div.tooltip {   
+      position: absolute;           
+      text-align: center;           
+      width: 120px;                  
+      height: 58px;                 
+      padding: 2px;             
+      font: 12px sans-serif;        
+      background: white;   
+      border: 0px;      
+      border-radius: 8px;           
+      pointer-events: none;         
+    }
+    #crimeTypes {
+  background: transparent;
+  font-size:1rem;
+  width:30vw;
+  border-radius:0;
+  text-align:center;
+  outline: none;
+  padding:1vw 1vh 1vw 1vh;
+}
+    </style>
+  <body style="text-align:center">
+  <h2>Crime Stats in USA</h2>
+  <select id="crimeTypes">
+    <option value="Aggravated assault">Aggravated assault</option>
+    <option value="Murder and nonnegligent manslaughter">Murder and nonnegligent manslaughter</option>
+    <option value="Property crime">Property crime</option>
+    <option value="Violent crime1">Violent crime</option>
+  </select>
+    
+  </body>
+  <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.3.0/d3.js"></script>
+  <script>
+    var color
+    var width = 960;
+    var height = 600;     
+
+    var colorPad ={
+      "Aggravated assault":[
+                            '#99d8c9',
+                            '#41ae76',
+                            '#238b45',
+                            '#006d2c',
+                            '#00441b'],
+      "Murder and nonnegligent manslaughter":[
+                                              '#fdbb84',
+                                              '#ef6548',
+                                              '#d7301f',
+                                              '#b30000',
+                                              '#7f0000'],
+      "Property crime":[
+                        '#9ebcda',
+                        '#8c6bb1',
+                        '#88419d',
+                        '#810f7c',
+                        '#4d004b'],
+      "Violent crime1":[
+                        '#c994c7',
+                        '#e7298a',
+                        '#ce1256',
+                        '#980043',
+                        '#67001f']
+    } 
+    
+    var projection = d3.geo.albersUsa()
+    .scale(1000)
+    .translate([width / 2, height / 2]);
+
+    var path = d3.geo.path()
+    .projection(projection); 
+    
+    //Create SVG element and append map to the SVG
+    var svg = d3.select("body")
+          .append("svg")
+          .attr("viewBox", '0 0 960 500')
+          .attr('preserveAspectRatio',"xMidYMid meet")
+          .attr('width','70vw');            
+    // Append Div for tooltip to SVG
+    var div = d3.select("body")
+            .append("div")   
+            .attr("class", "tooltip")               
+            .style("opacity", 0);
+    //legend
+    var g = svg.append("g")
+    .attr("class", "key")
+    .attr("transform", "translate(0,40)");
+
+    d3.csv("data/crimes_by_states_clean.csv", function(data) {
+      
+      d3.json("data/geojson_states.json", function(json) {
+        // Loop through each state data value in the .csv file
+        for (var i = 0; i < data.length; i++) {
+          // Grab State Name
+          var dataState = data[i].State;
+          // Grab data value 
+          var dataValue = data[i];
+          // Find the corresponding state inside the GeoJSON
+          var features = json.features
+          for (var j = 0; j < features.length; j++)  {
+            var jsonState = features[j].properties.NAME.toUpperCase();
+            if (dataState == jsonState) {
+            // Copy the data value into the JSON
+            features[j].properties.crimeData = dataValue; 
+            // Stop looking through the JSON
+            break;
+            }
+          }
+        }
+        //String to Int
+        for (var i=0; i<json.features.length;i++){
+          for (j in json.features[i].properties.crimeData){
+            if (j!=='State'){
+              json.features[i].properties.crimeData[j] = parseInt(json.features[i].properties.crimeData[j].replace(/,/g, ''))
+            }
+            
+          }
+          
+        }
+
+        var map = svg.selectAll("path")
+                  .data(json.features)
+
+        $('#crimeTypes').change(function(){
+          var crimeType = $('#crimeTypes').val()
+          var color
+          var max = Number.MIN_VALUE 
+          var min = Number.MAX_VALUE
+          var test_arr=[]
+          for (var i=0; i<json.features.length;i++){
+            var val = json.features[i].properties.crimeData[crimeType]
+            test_arr.push(val)
+            max = Math.max(max, val)
+            min = Math.min(min, val)
+            json.features[i].properties.crimeData[crimeType] = val
+          }
+          
+          //Customised scaler
+          color = function(num){
+            var gap = (max-min+1)/5
+            return colorPad[crimeType][Math.floor((num - min)/gap)]
+          }
+
+          //Draw map using GeoJSON
+              map.enter()
+              .append("path")
+              .attr("d", path)
+              .attr("data",function(d){
+                return d.properties.crimeData
+              })
+              .style("stroke", "#fff")
+              .style("stroke-width", "2")
+              .style("fill", function(d) {
+                return color(d.properties.crimeData[crimeType]);
+              }).on("mouseover", function(d) {    
+                    div.selectAll('p').data([d.properties.crimeData.State,d.properties.crimeData[crimeType]]).enter()
+                    .append('p').text(function(d){return d;})
+
+                    div.transition()        
+                         .duration(200)      
+                         .style("opacity", .9);      
+                         div
+                         .style("left", (d3.event.pageX) + "px")     
+                         .style("top", (d3.event.pageY - 28) + "px")
+                })   
+
+                  // fade out tooltip on mouse out               
+                  .on("mouseout", function(d) {       
+                      div.selectAll('p').data([]).exit().remove()
+                      div.transition()        
+                         .duration(500)      
+                         .style("opacity", 0);   
+                  });
+          //Draw legend
+          var interval = []
+          var gap = (max-min+1)/5
+          for (var i=0;i<=4;i++){
+            interval.push([min+i*gap,min+(i+1)*gap])
+          }
+          var x = d3.scale.linear()
+                .domain([min, max])
+                .rangeRound([600, 860]);
+          d3.select(".key").remove()
+          var g = svg.append("g")
+              .attr("class", "key")
+              .attr("transform", "translate(0,50)");
+            g.selectAll("rect")
+                .data(interval)
+                .enter().append("rect")
+                  .attr("height", 8)
+                  .attr("x", function(d) { return x(d[0]); })
+                  .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+                  .attr("fill", function(d) { return color(d[0]); });
+            g.append("text")
+              .attr("class", "caption")
+              .attr("x", x.range()[0])
+              .attr("y", -6)
+              .attr("fill", "#000")
+              .attr("text-anchor", "start")
+              .attr("font-weight", "bold")
+              .text('Reported number')
+            var legendAxis = d3.svg.axis()
+                        .scale(x)
+                        .tickSize(15)
+                        .tickFormat(function(x, i) { 
+                          if (x >10000){
+                              x= x.toString()
+                              x = x.substring(0,x.length-3) + 'k'
+                            }
+                          return x; })
+                        .tickValues(interval.map(function(d){
+                            var val = Math.floor(d[0])
+                            return val
+                        }))
+            g.call(legendAxis).select('.domain').remove()
+
+            
+        }).change()
+        
+        
+    })
+  })
+
+
+
+    </script>
+</html>
