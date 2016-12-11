@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
   </head>
   <style type="text/css">
-
+    body {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
     /* On mouse hover, lighten state color */
     path:hover {
       fill-opacity: .7;
@@ -23,17 +26,19 @@
       pointer-events: none;         
     }
     #crimeTypes {
-  background: transparent;
-  font-size:1rem;
-  width:30vw;
-  border-radius:0;
-  text-align:center;
-  outline: none;
-  padding:1vw 1vh 1vw 1vh;
-}
+      background: transparent;
+      font-size:1rem;
+      width:30vw;
+      border-radius:0;
+      text-align:center;
+      outline: none;
+      padding:1vw 1vh 1vw 1vh;
+    }
     </style>
   <body style="text-align:center">
-  <h2>Crime Stats in USA</h2>
+  <h2>Crime in the US by States 2014</h2>
+  <p>Data source: https://ucr.fbi.gov/crime-in-the-u.s/2014/crime-in-the-u.s.-2014</p>
+  <p>The map below shows total crimes by different categories in each states of USA in 2014.</p>
   <select id="crimeTypes">
     <option value="Aggravated assault">Aggravated assault</option>
     <option value="Murder and nonnegligent manslaughter">Murder and nonnegligent manslaughter</option>
@@ -169,8 +174,7 @@
                     div.selectAll('p').data([d.properties.crimeData.State,d.properties.crimeData[crimeType]]).enter()
                     .append('p').text(function(d){return d;})
 
-                    div.transition()        
-                         .duration(200)      
+                    div.transition()            
                          .style("opacity", .9);      
                          div
                          .style("left", (d3.event.pageX) + "px")     
@@ -180,8 +184,7 @@
                   // fade out tooltip on mouse out               
                   .on("mouseout", function(d) {       
                       div.selectAll('p').data([]).exit().remove()
-                      div.transition()        
-                         .duration(500)      
+                      div.transition()             
                          .style("opacity", 0);   
                   });
           //Draw legend
